@@ -9,7 +9,7 @@ import json
 
 # --- KONFIGURASI ---
 DATABASE_URL = os.getenv("postgresql://postgres:OcoHWhOsbEUfJcMo@db.yhybaqdxhgdrjcfhizds.supabase.co:5432/postgres")
-REDIS_URL = os.getenv("renewed-eagle-121073.upstash.io:6379")
+REDIS_URL = os.getenv("rediss://default:gQAAAAAAAdjxAAIgcDJiNjNmNWVkODIzNTg0YmFiYjM2N2IwMTI4NTFkOGJmNQ@renewed-eagle-121073.upstash.io:6379")
 REDIS_PASSWORD = os.getenv("gQAAAAAAAdjxAAIgcDJiNjNmNWVkODIzNTg0YmFiYjM2N2IwMTI4NTFkOGJmNQ")
 
 # Validasi wajib saat startup, bukan saat import
