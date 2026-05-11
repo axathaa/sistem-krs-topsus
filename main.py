@@ -28,7 +28,6 @@ class Dosen(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nip: str = Field(unique=True, index=True)
     nama: str
-    gelar: Optional[str] = None
     no_hp: Optional[str] = None
     email: Optional[str] = None
     mahasiswa_bimbingan: List["Mahasiswa"] = Relationship(back_populates="dpa")
@@ -38,7 +37,8 @@ class Mahasiswa(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nim: str = Field(unique=True, index=True)
     nama: str
-    angkatan: int
+    no_hp: Optional[str] = None
+    email: Optional[str] = None
     id_dpa: Optional[int] = Field(default=None, foreign_key="tb_dosen.id")
     dpa: Optional[Dosen] = Relationship(back_populates="mahasiswa_bimbingan")
 
