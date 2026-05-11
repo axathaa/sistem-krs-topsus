@@ -8,9 +8,9 @@ import redis
 import json
 
 # --- KONFIGURASI ---
-DATABASE_URL = os.getenv("postgresql://postgres:OcoHWhOsbEUfJcMo@db.yhybaqdxhgdrjcfhizds.supabase.co:5432/postgres")
-REDIS_URL = os.getenv("rediss://default:gQAAAAAAAdjxAAIgcDJiNjNmNWVkODIzNTg0YmFiYjM2N2IwMTI4NTFkOGJmNQ@renewed-eagle-121073.upstash.io:6379")
-REDIS_PASSWORD = os.getenv("gQAAAAAAAdjxAAIgcDJiNjNmNWVkODIzNTg0YmFiYjM2N2IwMTI4NTFkOGJmNQ")
+DATABASE_URL = os.getenv("DATABASE_URL")
+REDIS_URL = os.getenv("REDIS_URL")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 
 # Validasi wajib saat startup, bukan saat import
 if not DATABASE_URL:
