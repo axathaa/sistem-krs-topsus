@@ -97,7 +97,7 @@ def get_all_dosen(session: Session = Depends(get_session)):
         if cached:
             return json.loads(cached)
     results = session.exec(select(Dosen)).all()
-    data = [{"id": d.id, "nip": d.nip, "nama": d.nama, "gelar": d.gelar, "no_hp": d.no_hp, "email": d.email} for d in results]
+    data = [{"id": d.id, "nip": d.nip, "nama": d.nama, "no_hp": d.no_hp, "email": d.email} for d in results]
     if redis_client:
         redis_client.setex("dosen:all", 300, json.dumps(data))
     return data
@@ -145,7 +145,7 @@ def delete_dosen(dosen_id: int, session: Session = Depends(get_session)):
 @app.get("/mahasiswa/")
 def get_all_mahasiswa(session: Session = Depends(get_session)):
     results = session.exec(select(Mahasiswa)).all()
-    return [{"id": m.id, "nim": m.nim, "nama": m.nama, "angkatan": m.angkatan, "id_dpa": m.id_dpa, "nama_dpa": m.dpa.nama if m.dpa else "Belum Ada"} for m in results]
+    return [{"id": m.id, "nim": m.nim, "nama": m.nama, "no_hp": d.no_hp, "email": d.email, "id_dpa": m.id_dpa, "nama_dpa": m.dpa.nama if m.dpa else "Belum Ada"} for m in results]
 
 @app.get("/mahasiswa/{mahasiswa_id}")
 def get_mahasiswa(mahasiswa_id: int, session: Session = Depends(get_session)):
