@@ -6,18 +6,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Relationship
 import redis
 import json
+import sys
 
 # --- KONFIGURASI ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv("REDIS_URL")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 
-# Validasi wajib saat startup, bukan saat import
-if not DATABASE_URL:
-    raise RuntimeError("Environment variable DATABASE_URL belum diset!")
+# DEBUG: tampilkan status env vars di log Railway
+print(f"[DEBUG] DATABASE_URL exists: {bool(DATABASE_URL)}", file=sys.stderr, flush=True)
+print(f"[DEBUG] REDIS_URL exists: {bool(REDIS_URL)}", file=sys.stderr, flush=True)
 
-# Engine dibuat SEKALI, tapi setelah validasi di atas
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# Engine hanya dibuat jika DATABASE_URL tersedia
+engine = None
+if DATABASE_URL:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # --- MODEL DATA ---
 class Dosen(SQLModel, table=True):
@@ -53,19 +56,19 @@ def get_redis():
         r.ping()
         return r
     except Exception:
-        return None  # Redis gagal tidak crash app
+        return None
 
 redis_client = get_redis()
 
-# --- LIFESPAN: buat tabel otomatis saat startup ---
+# --- LIFESPAN ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    SQLModel.metadata.create_all(engine)
+    if engine:
+        SQLModel.metadata.create_all(engine)
     yield
 
 app = FastAPI(title="Sistem KRS API", lifespan=lifespan)
 
-# --- CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -73,45 +76,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- DEPENDENCY ---
 def get_session():
+    if not engine:
+        raise HTTPException(status_code=500, detail="Database belum terkonfigurasi")
     with Session(engine) as session:
         yield session
 
-# =====================
-# ENDPOINT ROOT
-# =====================
 @app.get("/")
 def root():
-    return {"message": "Backend Sistem KRS Berjalan Lancar!"}
+    return {
+        "message": "Backend Sistem KRS",
+        "database_connected": engine is not None,
+        "redis_connected": redis_client is not None,
+    }
 
-# =====================
-# CRUD DOSEN
-# =====================
 @app.get("/dosen/")
 def get_all_dosen(session: Session = Depends(get_session)):
-    # Coba ambil dari cache Redis dulu
     if redis_client:
         cached = redis_client.get("dosen:all")
         if cached:
             return json.loads(cached)
-
     results = session.exec(select(Dosen)).all()
-    data = [
-        {
-            "id": d.id,
-            "nip": d.nip,
-            "nama": d.nama,
-            "gelar": d.gelar,
-            "no_hp": d.no_hp,
-            "email": d.email,
-        }
-        for d in results
-    ]
-
+    data = [{"id": d.id, "nip": d.nip, "nama": d.nama, "gelar": d.gelar, "no_hp": d.no_hp, "email": d.email} for d in results]
     if redis_client:
-        redis_client.setex("dosen:all", 300, json.dumps(data))  # cache 5 menit
-
+        redis_client.setex("dosen:all", 300, json.dumps(data))
     return data
 
 @app.get("/dosen/{dosen_id}")
@@ -127,7 +115,7 @@ def create_dosen(dosen: Dosen, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(dosen)
     if redis_client:
-        redis_client.delete("dosen:all")  # invalidate cache
+        redis_client.delete("dosen:all")
     return dosen
 
 @app.put("/dosen/{dosen_id}")
@@ -135,8 +123,7 @@ def update_dosen(dosen_id: int, dosen_data: Dosen, session: Session = Depends(ge
     dosen = session.get(Dosen, dosen_id)
     if not dosen:
         raise HTTPException(status_code=404, detail="Dosen tidak ditemukan")
-    dosen_data_dict = dosen_data.model_dump(exclude_unset=True)
-    for key, value in dosen_data_dict.items():
+    for key, value in dosen_data.model_dump(exclude_unset=True).items():
         setattr(dosen, key, value)
     session.commit()
     session.refresh(dosen)
@@ -155,23 +142,10 @@ def delete_dosen(dosen_id: int, session: Session = Depends(get_session)):
         redis_client.delete("dosen:all")
     return {"message": "Dosen berhasil dihapus"}
 
-# =====================
-# CRUD MAHASISWA
-# =====================
 @app.get("/mahasiswa/")
 def get_all_mahasiswa(session: Session = Depends(get_session)):
     results = session.exec(select(Mahasiswa)).all()
-    return [
-        {
-            "id": m.id,
-            "nim": m.nim,
-            "nama": m.nama,
-            "angkatan": m.angkatan,
-            "id_dpa": m.id_dpa,
-            "nama_dpa": m.dpa.nama if m.dpa else "Belum Ada",
-        }
-        for m in results
-    ]
+    return [{"id": m.id, "nim": m.nim, "nama": m.nama, "angkatan": m.angkatan, "id_dpa": m.id_dpa, "nama_dpa": m.dpa.nama if m.dpa else "Belum Ada"} for m in results]
 
 @app.get("/mahasiswa/{mahasiswa_id}")
 def get_mahasiswa(mahasiswa_id: int, session: Session = Depends(get_session)):
