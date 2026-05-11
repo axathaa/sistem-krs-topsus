@@ -36,6 +36,43 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+class User(SQLModel, table=True):
+    __tablename__ = "users"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
+    password_hash: str
+    role: str
+    link_id: Optional[int] = None
+
+@app.post("/auth/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    # 1. Cari user di database
+    user = session.exec(select(User).where(User.username == form_data.username)).first()
+    
+    # 2. Validasi User & Password
+    if not user or not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=401, 
+            detail="Username atau password salah",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 3. Buat Token dengan Payload: ID, Username, dan Role
+    access_token = create_access_token(
+        data={
+            "sub": user.username, 
+            "id": user.id, 
+            "role": user.role, 
+            "link_id": user.link_id
+        }
+    )
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "role": user.role # Kita kirim role juga agar frontend mudah membaca
+    }
+
 # --- KONFIGURASI ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv("REDIS_URL")
