@@ -7,6 +7,34 @@ from sqlmodel import SQLModel, Field, create_engine, Session, select, Relationsh
 import redis
 import json
 import sys
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+# Konfigurasi JWT
+SECRET_KEY = "ALEXA_SUPER_SECRET_KEY_2026" # Ganti dengan string acak yang kuat
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # Token berlaku 24 jam
+
+# Setup Hashing Password
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Definisi skema OAuth2
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+# --- Helper Functions ---
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 # --- KONFIGURASI ---
 DATABASE_URL = os.getenv("DATABASE_URL")
