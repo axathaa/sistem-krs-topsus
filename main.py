@@ -145,7 +145,7 @@ def delete_dosen(dosen_id: int, session: Session = Depends(get_session)):
 @app.get("/mahasiswa/")
 def get_all_mahasiswa(session: Session = Depends(get_session)):
     results = session.exec(select(Mahasiswa)).all()
-    return [{"id": m.id, "nim": m.nim, "nama": m.nama, "no_hp": d.no_hp, "email": d.email, "id_dpa": m.id_dpa, "nama_dpa": m.dpa.nama if m.dpa else "Belum Ada"} for m in results]
+    return [{"id": m.id, "nim": m.nim, "nama": m.nama, "no_hp": m.no_hp, "email": m.email, "id_dpa": m.id_dpa, "nama_dpa": m.dpa.nama if m.dpa else "Belum Ada"} for m in results]
 
 @app.get("/mahasiswa/{mahasiswa_id}")
 def get_mahasiswa(mahasiswa_id: int, session: Session = Depends(get_session)):
